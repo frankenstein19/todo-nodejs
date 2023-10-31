@@ -31,7 +31,7 @@ exports.login = async (request, response, next)=> {
         }
         let tokenData = {_id:userExist._id, email:userExist.email};
 
-        const token = await UserServies.generateToken(tokenData,"secretKey",'1h');
+        const token = await UserServies.generateToken(tokenData,"secretKey",'100h');
 
         response.json({status:true,message:"You have logged in Successfully",token:token,email:userExist.email});
 

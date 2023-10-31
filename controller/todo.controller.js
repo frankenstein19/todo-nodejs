@@ -1,4 +1,5 @@
 const TodoServices = require('../services/todo.services')
+const {emitToRoom,SOCKET_EVENTS} = require('./socket.controller')
 
 module.exports = {
    createTodo, 
@@ -12,6 +13,8 @@ module.exports = {
       const {title,description} = request.body
    
       const successResponse = await TodoServices.addTodo(request.userId,title,description);
+
+      emitToRoom(request.userId,SOCKET_EVENTS.TODO_ADDED,successResponse)
   
       response.json({status:true,message:'Todo Created Successfully'})
   
@@ -41,6 +44,7 @@ module.exports = {
          response.json({status:false,message:'Todo not found'})
          return
       }
+      emitToRoom(request.userId,SOCKET_EVENTS.TODO_REMOVED,successResponse)
       response.json({status:true,message:'Todo deleted Successfully'})
   
    } catch (error) {
@@ -62,12 +66,14 @@ module.exports = {
       }
 
       const {id,title,description} = request.body
+      
       const successResponse = await TodoServices.updateTodo(id,request.userId,title,description);
       if(!successResponse)
       {
          response.json({status:false,message:'Todo not found'})
          return
       }
+      emitToRoom(request.userId,SOCKET_EVENTS.TODO_UPDATED,successResponse)
       response.json({status:true,message:'Todo updated Successfully',data:successResponse})
   
    } catch (error) {

@@ -2,17 +2,32 @@
 // for example if we are hitting route then express will trigger specific function based on that
 const express = require('express');
 
+const app = express();
+
 const Jwt = require('jsonwebtoken')
 
-const body_parser = require('body-parser');
+const path = require('path')
+
+const body_parser = require('body-parser')
+
+const http = require('http').Server(app)
+
+const io = require('socket.io')(http)
+
+global.io=io
 
 
 const userRouter = require('./routers/user.router')
 
 const todoRouter = require('./routers/todo.router')
 
-
-const app = express();
+app.get('/',function(req,res){
+    var options = {
+        root: path.join(__dirname)
+    }
+    let fileName = 'index.html'
+    res.sendFile(fileName,options)
+})
 
  app.use(body_parser.json());
 
@@ -39,4 +54,45 @@ const app = express();
     }
 },todoRouter)
 
-module.exports = app;
+// Http needs to listern otherwise socket will be not connected 
+http.listen(3000, function() {
+    console.log(`Server started http://localhost:3000`);
+ });
+ 
+ // This custom path for socket
+ let socketIO =  io.of('/socket')
+
+
+ socketIO.use((socket, next) => {
+    const token = socket.handshake.query.token;
+    if (token) {
+      try {
+        const decoded = Jwt.verify(token, 'secretKey'); // Verify the token using your secret key
+        socket.userId = decoded._id; // Attach the user ID to the socket for reference
+        next(); // Continue with the socket connection
+      } catch (error) {
+        next(new Error('Invalid token')); // Handle invalid tokens here
+      }
+    } else {
+      next(new Error('Token missing')); // Handle missing tokens here
+    }
+  });
+
+
+ socketIO.on('connection',function(socket){
+   console.log('User connected to socket')
+   socket.join(socket.userId)
+
+
+   socketIO.to(socket.userId).emit('connectedRoom', `connected to the roomId ${socket.userId} `)
+
+   socket.on('disconnect',function(){
+    console.log('User disconnect to socket')
+   })
+})
+
+
+
+module.exports =  {
+    app
+} 
